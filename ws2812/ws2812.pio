@@ -1,0 +1,107 @@
+;
+; Copyright (c) 2020 Raspberry Pi (Trading) Ltd.
+;
+; SPDX-License-Identifier: BSD-3-Clause
+;
+
+; define a program named ws2812. Can define multiple program in one pio file
+.program ws2812 
+; PIO instruction is 16 bits in general with 5 bits for the "delay". We borrow 
+; 1 bit of those delay to use for "side-set", which drives the value of 
+; some other pins. 
+; Notice that when borrowing one bit, we now have the delay range of 0-15(4 bits)
+.side_set 1
+
+
+; define the delay cycles on each instruction. 
+.define public T1 2
+.define public T2 5
+.define public T3 3
+
+
+.lang_opt python sideset_init = pico.PIO.OUT_HIGH
+.lang_opt python out_init     = pico.PIO.OUT_HIGH
+.lang_opt python out_shiftdir = 1
+
+.wrap_target
+
+
+bitloop:
+    ; 1. [T3 - 1] is the number of delay circles. The instruction itself takes a circle.
+    ; 2. "x" and "y" are two scratch registers. State machines use their scratch registers
+    ;     to compare temp data.  
+    ; 3. "out" takes some bits from the output shift register(OSR) to "x".
+    ; 4. "side 0": drive low(0) the pin configured for side-set. 
+    ; workflow: first set "set-side" = 0, then move one bit from OSR to x, finally wait[T3 - 1] circles.
+    ;
+    out x, 1       side 0 [T3 - 1] ; Side-set still takes place when instruction stalls
+    
+    ; 1. "side 1": drive high the pin configured for side-set
+    ; 2. "jmp": jump to do_zero if !x == true 
+    ; 3. [T1 - 1]: the whole circle is T1. 
+    jmp !x do_zero side 1 [T1 - 1] ; Branch on the bit we shifted out. Positive pulse
+do_one:
+    jmp  bitloop   side 1 [T2 - 1] ; Continue driving high, for a long pulse
+do_zero:
+    ; nop: Do nothing 
+    nop            side 0 [T2 - 1] ; Or drive low, for a short pulse
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void ws2812_program_init(PIO pio, uint sm, uint offset, uint pin, float freq, bool rgbw) {
+
+    pio_gpio_init(pio, pin);
+    pio_sm_set_consecutive_pindirs(pio, sm, pin, 1, true);
+
+    pio_sm_config c = ws2812_program_get_default_config(offset);
+    sm_config_set_sideset_pins(&c, pin);
+    sm_config_set_out_shift(&c, false, true, rgbw ? 32 : 24);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    int cycles_per_bit = ws2812_T1 + ws2812_T2 + ws2812_T3;
+    float div = clock_get_hz(clk_sys) / (freq * cycles_per_bit);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
+
+.program ws2812_parallel
+
+.define public T1 2
+.define public T2 5
+.define public T3 3
+
+.wrap_target
+    out x, 32
+    mov pins, !null [T1-1]
+    mov pins, x     [T2-1]
+    mov pins, null  [T3-2]
+.wrap
+
+% c-sdk {
+#include "hardware/clocks.h"
+
+static inline void ws2812_parallel_program_init(PIO pio, uint sm, uint offset, uint pin_base, uint pin_count, float freq) {
+    for(uint i=pin_base; i<pin_base+pin_count; i++) {
+        pio_gpio_init(pio, i);
+    }
+    pio_sm_set_consecutive_pindirs(pio, sm, pin_base, pin_count, true);
+
+    pio_sm_config c = ws2812_parallel_program_get_default_config(offset);
+    sm_config_set_out_shift(&c, true, true, 32);
+    sm_config_set_out_pins(&c, pin_base, pin_count);
+    sm_config_set_set_pins(&c, pin_base, pin_count);
+    sm_config_set_fifo_join(&c, PIO_FIFO_JOIN_TX);
+
+    int cycles_per_bit = ws2812_parallel_T1 + ws2812_parallel_T2 + ws2812_parallel_T3;
+    float div = clock_get_hz(clk_sys) / (freq * cycles_per_bit);
+    sm_config_set_clkdiv(&c, div);
+
+    pio_sm_init(pio, sm, offset, &c);
+    pio_sm_set_enabled(pio, sm, true);
+}
+%}
