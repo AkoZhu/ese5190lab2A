@@ -1,3 +1,12 @@
+University of Pennsylvania, ESE 5190: Intro to Embedded Systems, Lab 2A
+
+```
+Xuanbiao Zhu
+Tested on: MacBook Air (M1, 2020), macOS Monterey 12.5.1
+```
+
+
+
 # Part 3 Tackling LEDs 
 
 ## 3.1 Resources 
