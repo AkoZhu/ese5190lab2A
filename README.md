@@ -113,8 +113,8 @@ After we get a detailed snapshot of the SM's state, we could step through the SM
 Here is something about WS2812:
 
 1. WS2812 uses non-return-to-zero encoding to represent '0' and '1'.
-2. WS2812 uses "GBR" chennel in order rather than typical "RGB" channel. 
-3. WS2812 uses wired connection to link between DI in WS2812 with PIN 12 in RP2040. 
+2. WS2812 uses the "GBR" channel in order rather than the typical "RGB" channel. 
+3. WS2812 uses a wired connection to link DI in WS2812 with PIN 12 in RP2040. 
 4. WS2812 uses DI-DO serial connection when we need several WS2812s. 
 
 
@@ -161,23 +161,23 @@ do_zero:
 
 
 
-The whole time diagram depicts the process between Data loaded in FIFO and the finished transmision of first bit.  
+The whole-time diagram depicts the process between Data loaded in FIFO and the finished transmission of the first bit.  
 
-Here is something imporatnt you need to know:
+Here is something important you need to know:
 
 1. The whole process is as follows:
 
    - Data comes to FIFO -> OSR pulls data -> right shift to GPIO Pin -> WS2812 gets data bit 
 
-2. $T_1, T_2, T_3$ represents the different time period spent by each setted instruction.
+2. $T_1, T_2, T_3$ represents the different periods spent by each set of instructions.
 
-   - Actually, each instruction costs one SM circle. 
+   - Each instruction costs one SM circle. 
 
-   - To allign your whole period so as to fit the protocol, we add some delay period.
+   - We add some delay periods to align your whole period to fit the protocol.
 
-3. Tthe SM stalls when FIFO is empty and OSR still use pull, which causes a 'freeze' of the state. 
+3. The SM stalls when FIFO is empty, and OSR still uses pull, which causes a 'freeze' of the state. 
 
-4.  '0' and '1' are represented by the different time period of high level voltage.
+4.  '0' and '1' are represented by the different periods of high-level voltage.
 
 
 
@@ -187,9 +187,9 @@ Here is something imporatnt you need to know:
 
 
 
-After we finish the transmision in a bit, we start to tranmit the whole package. 
+After we finish the transmission in a bit, we start to transmit the whole package. 
 
-In this section, we are trying to find out the causal relationship between different signals. 
+In this section, we are trying to determine the causal relationship between different signals. 
 
 In this case, it is:
 
@@ -205,10 +205,10 @@ In this case, it is:
 
 Before we draw the picture, we know that:
 
-- The SM clock and SM cycle count is independent to other signals. 
-- GPIO output is drived by output of OSR.
-- WS2812 serial input pin is drived by GPIO output pin.
-- WS2812 LED supply voltage is independent to other signals.
+- The SM clock and SM cycle count are independent of other signals. 
+- The output of OSR drives GPIO output.
+- WS2812 serial input pin is driven by the GPIO output pin.
+- WS2812 LED supply voltage is independent of other signals.
 - WS2812 LED luminance only exists when the LED is on, which means that the WS2812 LED receives the whole color data. 
 - APDS-9960 can only detect luminance after the WS2812 LED is on. 
 
@@ -220,19 +220,32 @@ Now we can draw the picture:
 
 
 
-After we know the transmision for a bit, we can draw the transmission for a data packge. 
+After we know the transmission for a bit, we can draw the transmission for a data package. 
 
 ![ZoomInSecond](./assets/ZoomInSecond.png)
 
 
 
-[Here](./part3.xlsx) is the complete spreadsheet about the different value in registers and different voltage in pins.
+[Here](./part3.xlsx) is the complete spreadsheet about the values in registers and different voltages in pins.
+
+
+
+Here, I use the tablet to draw the chart, which is easier to notice the change in different signals and the pattern of the whole transmission. Also, it is easier to draw the entire data package transmission based on the Bit transmission. However, there are some disadvantages,  including the lack of precision. 
+
+| Approach    | Benefit                                       | Drawback                             |
+| ----------- | --------------------------------------------- | ------------------------------------ |
+| Tablet      | Easy to notice the pattern; different signals | Relatively lack precision            |
+| Spreadsheet | Precise                                       | Redundancy; hard to find the pattern |
+
+
+
+
 
 
 
 ## 3.8 Hello Blinkenlight
 
-In this section, we write a C program to make RP2040 interative. 
+In this section, we write a C program to make RP2040 interactive. 
 
 Here is the main function and logic:
 
@@ -240,8 +253,8 @@ Here is the main function and logic:
   - When pressing 'r', 'g', and 'b', WS2812 emits the corresponding 'red', 'green', and 'blue' light.
 - Logic:
   - Set up the WS2812 Power pin to high.
-  - Initialize the WS2812 program, including PIO program, SM and GPIO.
-  - Use `getchar` to receive the input from keyboard.
+  - Initialize the WS2812 program, including the PIO program, SM, and GPIO.
+  - Use `getchar` to receive the input from the keyboard.
   - Set corresponding color data into PIO. 
 
 Here is the Demo:
